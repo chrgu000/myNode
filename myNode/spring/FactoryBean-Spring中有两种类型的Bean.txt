@@ -1,0 +1,23 @@
+FactoryBean
+Spring中有两种类型的Bean，一种是普通Bean，另一种是工厂Bean即FactoryBean，这两种Bean都被容器管理。 
+工厂Bean是实现了org.springframework.beans.factory.FactoryBean<T>接口的Bean，从ApplicationContext的getBean()方法获取的对象不是该类的一个实例，而是该类的getObject()方法所返回的对象。
+
+当我们需要获取FactoryBean实例本身而不是它所产生的bean，则要使用&符号。 
+比如，现有FactoryBean，id为”playerBean”，在容器上调用ctx.getBean("playerBean")将返回FactoryBean产生的bean。调用getBean("&playerBean")将返回FactoryBean它本身的实例。
+
+FactoryBean基本上是Spring大部分功能的核心（AOP、代理）
+
+
+
+
+@Resource 的作用相当于 @Autowired，只不过 @Autowired 按 byType 自动注入，
+面@Resource 默认按 byName 自动注入。@Resource 有两个重要属性分别是 name 和 type。
+如果使用 name 属性，则使用 byName 的自动注入策略，而使用 type 属性时则使用 byType 自动注入策略。
+都不写就默认按 byName 自动注入，如果找不到对应name的bean，则再按byType查找。
+
+
+Singleton Bean 注入 Prototype Bean
+由于Singleton Bean只初始化一次，所以Singleton Bean中注入的Prototype Bean也只会被注入一次，
+这就导致此Prototype Bean也变成了Singleton Bean. 
+解决方法：不使用自动注入而是使用BeanFactory，在每次使用Prototype Bean时手动获得。
+实现ApplicationContextAware接口，getPrototype()方法调用 ctx.getBean让容器生产Prototype Bean

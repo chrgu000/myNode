@@ -1,0 +1,80 @@
+SmartLifecycle  在ApplicationContext容器启动（初始化所有bean后，或者refresh上下文后）
+或停止时，做一些操作。
+
+让实现了SmartLifecycle的对象被Spring管理即可（@Component）
+
+LifecycleProcessor 是SmartLifecycle的处理类
+1. getPhase() 返回 int，Spring会按顺序执行各个SmartLifecycle对象。
+    start() 方法会按从小到大的顺序执行
+    stop(callback) 方法会按从大到小的顺序执行
+    
+2. 当isAutoStartup()返回true，isRunning()返回false时，start()方法才会被执行
+   当isRunning() 返回true时，stop(callback)才会被执行
+   
+3. stop() 是继承自Lifecycle接口的方法，
+   stop(callback) 是SmartLifecycle独有的方法，要在方法中调用callback.run()，否则spring停止会被卡住，直到超时（30s）
+   smartLifecycle只会执行stop(callback)
+   
+   start() 没啥好说的，一般用于在所有bean初始化好后处理一些任务
+   
+常见实现
+SchedulerFactoryBean  
+EurekaServerInitializerConfiguration 
+EurekaAutoServicreRegistration
+//所以不能在一般的bean中@Autowire EurekaClient因为在bean初始化时EurekaClient还不存在
+RedisMessageListenerContainer
+   
+   
+容器启动（初始化bean）流程
+见图
+
+容器级-对所有bean都有效
+BeanFactoryPostProcessor
+BeanFactoryPostProcessor是生命周期中最早被调用的，远远早于BeanPostProcessor。它在spring容器加载了bean的定义文件之后，在bean实例化之前执行的。也就是说，Spring允许BeanFactoryPostProcessor在容器创建bean之前读取bean配置元数据，并可进行修改。例如增加bean的属性和值，重新设置bean是否作为自动装配的侯选者，重设bean的依赖项等等。
+多个BeanFactoryPostProcessor可以通过@Order决定执行顺序
+    1.postProcessBeanFactory()    
+InstantiationAwareBeanPostProcessor
+InstantiationAwareBeanPostProcessor是BeanPostProcessor的子接口。从最上面的生命周期图，我们知道它在Bean生命周期的另外三个时期提供扩展的回调接口。其使用方法与BeanPostProcessor接口类似，只时回调时机不同。
+    2.postProcessBeforInstantiation()   //before the target bean gets instantiated
+    *bean初始化(调用bean构造函数)
+    3.postProcessPropertyValues()       //before the factory applies them to the given bean
+    *bean属性注入
+    10.postProcessAfterInstantiation()  //after the bean has been instantiated, 但在Spring属性填充（来自显式属性或autowiring）之前执行操作。
+    *Spring容器启动完成，业务模块可以正常调用bean（可以注入bean）
+BeanPostProcessor
+在Spring容器完成Bean实例化和属性设置后，并且在bean调用初始化方法之前或之后。因此BeanPostProcessor(Bean后置处理器)常用在：对bean内部的值进行修改；实现Bean的动态代理等。
+    6.postProcessBeforInstantiation     //before any bean initialization callbacks
+    9.postProcessAfterInstantiation     //after any bean initialization callbacks
+    
+Bean级生命周期接口方法-来源于bean自身继承生命周期接口
+InitializingBean
+    7.afterpropertiestSet()
+DiposableBean
+    11.destory()  //容器关闭时
+
+Bean自身方法-InitMethod/DestoryMethod
+@PostConstruct
+    8.init-method
+@PreDestory
+    12.destory-method  //容器关闭时
+
+其他在生命周期（bean生成时）涉及的方法
+Aware，是感应和感知的意思。当bean实现了对应的Aware接口时，BeanFactory会在生产bean时根据它所实现的Aware接口，给bean注入对应的属性，从而让bean获取外界的信息。
+
+BeanNameAware
+在bean内部，它并不知道容器给自己取了个什么id，如果想要获取自己在容器中的id，可以实现BeanNameAware接口获取。
+    4.setBeanName()
+    
+ApplicationContextAware - bean继承以获得自身所运行的容器的信息
+    5.setApplicationContext()   //Invoked after population of normal bean properties but before an init callback
+也可以使用自动装配:@Autowire ApplicationContextAware context;
+
+BeanFactoryAware
+    和ApplicationContextAware一样
+
+...
+    
+    
+
+    
+    

@@ -1,0 +1,9 @@
+Thread
+
+Object: notify/notifyAll() wait()
+Thread: join()
+
+1.wait()方法会使调用的线程进入等待
+2.notify()会随机唤醒一个等待线程，notifyAll()会唤醒所有在对应wait()上等待的线程去竞争
+3.join()利用了wait-notify机制
+4.当thread对象对应的线程死亡时，jvm会自动调用该thread对象的notifyAll()以避免在该对象上join的线程被永远阻塞
