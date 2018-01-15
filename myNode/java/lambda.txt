@@ -1,0 +1,4 @@
+reduce的三个参数
+    1. init-value 初始值, 如果有初始值，则不会返回Optional<t>
+    2. 计算(sum, item) -> sum
+    3. 合并lambda  对于并行流，最后要把多个结果合并，这个lambda就是用于sum合并的

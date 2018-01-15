@@ -1,0 +1,106 @@
+HTTPS详解
+https://segmentfault.com/a/1190000004985253
+
+HTTP的问题
+    中间人攻击和内容窃听  -加密
+    报文篡改    -完整性保护
+    仿冒服务器/客户端   -认证
+
+HTTPS = HTTP + 加密 + 认证 + 完整性保护
+
+HTTPS并非新的应用层协议，而是HTTP通信接口部分用SSL协议替代了而已。
+本来HTTP直接基于TCP通信，而在HTTPS中，他先和SSL通信，SSL再和TCP通信
+
+SSL是独立与HTTP的协议，在其他类似于HTTP的应用层SMTP协议都可以配合SSL协议使用（基于TCP/IP的应用层协议？）
+
+HTTPS会比HTTP慢：SSL通信 + 加密/解密
+
+TLS是SSL3.0的升级版，现在HTTPS基本上都是用TLS 
+   
+对称加密的意思就是，加密数据用的密钥，跟解密数据用的密钥是一样的。
+非对称加密，私有密钥是一方保管，而公钥则谁都可以获得。发送密文的一方先获得【对方】的公钥，加密后发送。
+非对称加密一般使用RSA算法：将两个大素数相乘很简单，但想要这个乘积进行因式分解极其困难，因此可以将乘积公开作为公钥
+e1和e2是一对相关的值，e1可以任意取，但要求e1与(p-1)*(q-1)互质；再选择e2，要求(e2×e1)≡1(mod(p-1)×(q-1))。
+(n，e1),(n，e2)就是密钥对。其中(n，e1)为公钥，(n，e2)为私钥。
+
+中间人攻击劫持
+A - B - C 
+假设B能控制A -> C的数据传输，那么B可以把自己的公钥伪装成C的公钥颁发给A，
+这样A的密文B就能通过自己的私钥解密，B还能把伪装后的信息通过C的公钥加密后发给C
+    |解决方案：证书（数字认证
+
+C作为服务器提供商，向CA提交(公钥、身份信息等)进行证书申请，CA验证过C是个可信公司后，用自己的CA公钥加密这些数据做成证书颁发给C。
+C会将证书传给A，A通过向CA校验确认这是个合法的证书，通过了则可以获得【合法】的公钥。
+A向CA校验，一般不会真去校验，而是通过在本地添加对CA的认证完成，浏览器一般都内置了常用CA的认证。
+而B显然是个不安全的机构，所以很难获得CA的认证。
+
+非对称加密很安全，但与对称加密相比，由于非对称加密的算法复杂性，导致它的加密和解密处理速度都比对称加密慢很多，效率很低。所以可以充分利用它们各自的优势，结合起来。先用非对称加密，交换对称加密会用的密钥，之后的通信交换则使用对称方式。这就是混合加密。
+1.使用非对称加密方式安全地交换在稍后的对称加密中要使用的密钥
+2.确保交换的密钥是安全的前提下，使用对称加密方式进行通信
+
+TLS的握手阶段是发生在TCP握手之后。握手实际上是一种协商的过程，对协议所必需的一些参数进行协商。
+1.Client Hello  客户端首先要告知服务端，自己支持哪些加密算法
+2.Server Hello  服务端在接收到客户端的Client Hello之后，服务端需要将自己的证书发送给客户端
+3.Client Key Exchange   如果服务端需要对客户端进行验证，在客户端收到服务端的Server Hello消息之后，首先需要向服务端发送客户端的证书，让服务端来验证客户端的合法性。
+4.Server Finish 如果客户端和服务端都能对Finish信息进行正常加解密且消息正确的被验证，则说明握手通道已经建立成功，接下来，双方可以使用上面产生的session secret对数据进行加密传输了。
+
+基于RSA握手
+[明文] 客户端发送随机数client_random和支持的加密方式列表
+[明文] 服务器返回随机数server_random ，选择的加密方式和服务器证书链
+[RSA] 客户端验证服务器证书，使用证书中的公钥加密premaster secret 发送给服务端
+服务端使用私钥解密premaster secret
+两端分别通过client_random，server_random 和premaster secret 生成master secret，用于对称加密后续通信内容
+
+OpenSSL是用 C 写的一套 SSL 和 TLS 开源实现。这也就意味着人人都可以基于这个构建属于自己的认证机构，然后给自己的颁发服务器证书。
+
+单向认证：只有服务端有证书和非对称，客户端拿到公钥后将对称密钥加密发送给服务端，加密方式等数据由明文发送
+双向认证：客户端也有证书和非对称，服务端拿到公钥后，将选择的加密方式通过公钥加密后发送给客户端
+
+
+Java相关
+如果要实现SSL通讯，通讯双方需要设置KeyStore和TrustStore。
+如果是单向认证，那么client侧只需要设置TrustStore, 客户端的TrustStore文件中保存着被客户端所信任的服务器的证书信息。
+客户端在进行SSL连接时，JSSE将根据这个文件中的证书决定是否信任服务器端的证书。
+但是通常我们并不需要做这个就能正常访问HTTPS服务，因为公网上提供的HTTPS服务的服务器一般通过CA签名，而客户端已经保存了常用的CA根证书。
+
+在SunJSSE中有一个信任管理器决定是否信任远端的证书，这个类的处理规则如下：
+1)若系统属性javax.net.ssl.trustStore指定了TrustStore文件，那么信任管理器就去jre安装路径下的lib/security/目录中寻找并使用这个文件来检查证书。
+2)若该系统属性没有指定TrustStore文件，它就会去JRE安装路径下寻找默认的TrustStore文件，这个文件的相对路径为：lib/security/jssecacerts。
+3)若jssecacerts不存在，但是cacerts存在（它随JRE一起发行，含有数量有限的可信任的基本证书），那么这个默认的TrustStore文件就是lib/security/cacerts。
+
+有时候服务器证书并没有经过签名，或者签名的根证书不是上述可信任证书。这个时候，直接使用URLConnection或者RestTemplate就会得到如下的错误：
+javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+
+这个时候有三个办法：
+1）创建一个Trust Store, 导入Server证书或者其签名的根证书
+keytool -export -alias jettyserver -keystore jettyserver.keystore -storepass jettyserverks -file jettyserver.cer
+keytool -import -alias jettyserver -keystore jettyclienttrust.keystore -storepass jettyclienttrustks -file jettyserver.cer
+然后在Java代码中
+System.setProperty("javax.net.ssl.trustStore", "jettyclienttrust.keystore");
+System.setProperty("javax.net.ssl.trustStorePassword", "jettyclienttrustks");
+这个办法比较简单，但是有个缺点就是这个是全局设置，会影响其他访问HTTPS的地方。
+2）直接把Server证书或者其签名的根证书导入到cacerts中。
+keytool -import -alias jettyserver -keystore cacerts -storepass changeit -file c:\_tmp\jettyserver.cer
+这个办法的缺点是所有部署程序的主机上都要作同样的事情，当然可以把JDK集成到程序里面。
+3）自己实现证书信任管理器类，跳过证书信任的检查。
+
+new TrustManager[]{new X509TrustManager() {
+    @Override
+    public void checkClientTrusted(X509Certificate[] arg0,
+                                   String arg1) throws CertificateException {
+        //该方法检查客户端的证书，若不信任该证书则抛出异常。由于我们不需要对客户端进行认证，因此我们只需要执行默认的信任管理器的这个方法。JSSE中，默认的信任管理器类为TrustManager。
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] arg0,
+                                   String arg1) throws CertificateException {
+        //该方法检查服务器的证书，若不信任该证书同样抛出异常。通过自己实现该方法，可以使之信任我们指定的任何证书。在实现该方法时，也可以简单的不做任何处理，即一个空的函数体，由于不会抛出异常，它就会信任任何证书。                           
+    }
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+        //返回受信任的X509证书数组。
+        return null;
+    }
+
+}}

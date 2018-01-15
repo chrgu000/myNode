@@ -1,0 +1,5 @@
+1.maven docker构建时报错 cannot connect localhost:2375
+docker setting - General - 勾选 Expose daemon on tcp://localhost:2375 without TLS
+
+2.windows10 安装docker-machine
+使用windows10子系统linux按照linux的方式安装

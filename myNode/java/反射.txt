@@ -1,0 +1,2 @@
+getDeclaredMethods() 返回该类自己实现的方法，包括接口方法，不包括未override的default方法，包括public/private/protected/default修饰的方法。
+getMethods() :获取当前类及所有继承的父类的public修饰的方法。仅包括public

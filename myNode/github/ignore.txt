@@ -1,0 +1,16 @@
+git init
+(
+git add -A
+git commit -m "first commit"
+)
+
+将rsa.pub添加到github的sshkey中
+ssh -T git@code.aliyun.com 测试sshkey是否添加成功
+
+git remote add origin git@code.aliyun.com:cumtbzy2011/hello.git 
+(
+git push -u origin master
+)
+
+
+git pull origin master

@@ -1,0 +1,27 @@
+git init
+(
+git add -A
+git commit -m "first commit"
+)
+
+
+ssh-keygen -t rsa -b 4096 -C "cumtbzy2011@gmail.com"
+
+将rsa.pub添加到github的sshkey中
+ssh -T git@code.aliyun.com 测试sshkey是否添加成功
+首次时会报错，并让你选择yes
+之后会：You've successfully authenticated, but GitHub does not
+provide shell access
+表示已经成功连接了，现在可以用git终端命令了
+
+git remote add origin git@code.aliyun.com:cumtbzy2011/hello.git 
+(
+git push -u origin master
+)
+
+
+git pull origin master
+
+
+
+git ls-remote -h git@github.com:cumtbzy2011/hello.git HEAD
